@@ -2,8 +2,6 @@
   "name": "dialogboxstudio/kd-api-client",
   "description": "Client API ",
   "type": "library",
-  "homepage": "https://github.com/dialogboxstudio/kd-api-client",
-  "time": "2020.09.26",
   "license": "MIT",
   "minimum-stability": "stable",
   "authors": [
