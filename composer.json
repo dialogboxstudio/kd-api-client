@@ -1,0 +1,30 @@
+{
+  "name": "dialogboxstudio/kd-api-client",
+  "description": "Client API ",
+  "type": "library",
+  "homepage": "https://github.com/dialogboxstudio/kd-api-client",
+  "time": "2020.09.26",
+  "license": "MIT",
+  "minimum-stability": "stable",
+  "authors": [
+    {
+      "name": "Vinogradov Victor",
+      "email": "victor.dialogbox@gmail.com",
+      "role": "Developer"
+    }
+  ],
+  "support": {
+    "email": "victor.dialogbox@gmail.com"
+  },
+  "autoload": {
+    "psr-4": {
+      "DialogBoxStudio\\KdClient\\": "src/"
+    }
+  },
+  "require": {
+    "php": "7.4.*",
+    "guzzlehttp/guzzle": "7.1.1",
+    "ext-json": "*",
+    "ext-mbstring": "*"
+  }
+}
