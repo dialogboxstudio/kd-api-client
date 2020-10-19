@@ -167,5 +167,15 @@ class Client
         return $this->request('seasonal_storage/status', ['number' => $auto]);
     }
 
+    public function services(string $city): Services
+    {
+        return $this->request('services', ['city' => $city]);
+    }
+
+    public function working(string $city): Working
+    {
+        return $this->request('working', ['city' => $city]);
+    }
+
 
 }
