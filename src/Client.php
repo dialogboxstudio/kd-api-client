@@ -5,7 +5,6 @@ namespace DialogBoxStudio\KdClient;
 
 
 use DialogBoxStudio\KdClient\API\Authorization;
-use DialogBoxStudio\KdClient\API\Error;
 use DialogBoxStudio\KdClient\API\Marketing;
 use DialogBoxStudio\KdClient\API\OrderStatus;
 use DialogBoxStudio\KdClient\API\SeasonalStorageStatus;
@@ -142,11 +141,20 @@ class Client
             $response = $this->getHttpClient()->request('POST', $url, ['form_params' => $params]);
             $result = ($response->getStatusCode() == 200) ? $response->getBody()->getContents() : '{"error":{"code":1,"message":"Сервер недоступен"}}"';
             $result_decode = json_decode($result);
-            return (isset($result_decode->error)) ? new Error($result) : new $this->map[$method]($result);
+            return (isset($result_decode->error)) ? new $this->map[$method]($result_decode->error->message, true) : new $this->map[$method]($result);
         } catch (Exception $e) {
-            return new Error($e);
+            return new $this->map[$method]('Ошибка при выполнении запроса', true);
         }
     }
 
+    public function authorization(string $phone): Authorization
+    {
+        return $this->request('authorization', ['phone' => $phone]);
+    }
+
+    public function marketing(string $city): Marketing
+    {
+        return $this->request('marketing', ['city' => $city]);
+    }
 
 }
