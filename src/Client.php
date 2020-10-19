@@ -1,153 +1,152 @@
 <?php
 
+
 namespace DialogBoxStudio\KdClient;
 
-use DialogBoxStudio\KdClient\Entity\Authorization;
-use DialogBoxStudio\KdClient\Entity\Marketing;
-use DialogBoxStudio\KdClient\Entity\OrderStatus;
-use DialogBoxStudio\KdClient\Entity\SeasonalStorageStatus;
-use DialogBoxStudio\KdClient\Entity\Services;
-use DialogBoxStudio\KdClient\Entity\Working;
-use Psr\Http\Message\ResponseInterface;
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
-use GuzzleHttp\Exception\RequestException;
+
+use DialogBoxStudio\KdClient\API\Authorization;
+use DialogBoxStudio\KdClient\API\Error;
+use DialogBoxStudio\KdClient\API\Marketing;
+use DialogBoxStudio\KdClient\API\OrderStatus;
+use DialogBoxStudio\KdClient\API\SeasonalStorageStatus;
+use DialogBoxStudio\KdClient\API\Services;
+use DialogBoxStudio\KdClient\API\Working;
 use Exception;
 
 class Client
 {
     /**
-     * Base URL API kolesa-darom.ru
+     * @var string $access_token
      */
-    public string $baseUrl = 'https://www.kolesa-darom.ru/ajax/telegram/api/1/';
+    private string $access_token;
 
     /**
-     * Test URL API kolesa-darom.ru
+     * @var string $base_url
      */
-    public string $testUrl = 'https://www.kolesa-darom.ru/ajax/telegram/api/1/';
+    private string $base_url = 'https://www.kolesa-darom.ru/ajax/telegram/api/1/';
 
     /**
-     * HTTP client
+     * @var object $http_client
      */
-    private ClientInterface $httpClient;
+    private object $http_client;
 
     /**
-     * Access token
+     * @var string $test_url
      */
-    private string $token;
+    private string $test_url = 'https://external.kolesa-darom.ru/ajax/telegram/api/1/';
 
     /**
-     * Базовые опции http запроса к API
+     * @var array|string[]
      */
-    private array $options = [
-        'headers' => [
-            'User-Agent' => 'kolesa-darom api-php-client/1.0',
-            'Content-Type' => 'application/json',
-        ],
+    private array $map = [
+        'authorization' => Authorization::class,
+        'marketing' => Marketing::class,
+        'order/status' => OrderStatus::class,
+        'seasonal_storage/status' => SeasonalStorageStatus::class,
+        'services' => Services::class,
+        'working' => Working::class
     ];
 
     /**
-     * Список доступных методов
+     * @var bool $test
      */
-    private array $methodList = [
-        'authorization',
-        'services',
-        'marketing',
-        'working',
-        'order/status',
-        'seasonal_storage/status'
-    ];
+    public bool $test;
 
     /**
-     * Client constructor.
-     * @param string $token
+     * NewClient constructor.
+     * @param string $access_token
+     * @param object $http_client
+     * @param bool $test
      */
-    public function __construct(string $token)
+    public function __construct(string $access_token, object $http_client, bool $test = false)
     {
-        $this->token = $token;
-        $this->httpClient = new \GuzzleHttp\Client();
+        $this->access_token = $access_token;
+        $this->http_client = $http_client;
+        $this->test = $test;
     }
 
     /**
-     * Получить http клиент.
-     * @return ClientInterface
+     * @return string
      */
-    public function getHttpClient(): ClientInterface
+    public function getAccessToken(): string
     {
-        if (is_null($this->httpClient)) {
-            $this->httpClient = new \GuzzleHttp\Client();
-        }
-        return $this->httpClient;
+        return $this->access_token;
     }
 
     /**
-     * Установить http клиент.
-     * @param ClientInterface $httpClient
-     * @return Client
+     * @return string
      */
-    public function setHttpClient(ClientInterface $httpClient): Client
+    public function getBaseUrl(): string
     {
-        $this->httpClient = $httpClient;
-        return $this;
+        return $this->base_url;
     }
 
     /**
-     * Запрос к API.
-     *
+     * @return object
+     */
+    public function getHttpClient(): object
+    {
+        return $this->http_client;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTestUrl(): string
+    {
+        return $this->test_url;
+    }
+
+    /**
+     * @param string $access_token
+     */
+    public function setAccessToken(string $access_token): void
+    {
+        $this->access_token = $access_token;
+    }
+
+    /**
+     * @param string $base_url
+     */
+    public function setBaseUrl(string $base_url): void
+    {
+        $this->base_url = $base_url;
+    }
+
+    /**
+     * @param object $http_client
+     */
+    public function setHttpClient(object $http_client): void
+    {
+        $this->http_client = $http_client;
+    }
+
+    /**
+     * @param string $test_url
+     */
+    public function setTestUrl(string $test_url): void
+    {
+        $this->test_url = $test_url;
+    }
+
+    /**
      * @param string $method
      * @param array $params
-     * @throws Exception
-     * @throws GuzzleException
+     * @return object
      */
-    public function query(string $method, array $params): ResponseInterface
+    public function request(string $method, array $params): object
     {
-        if (in_array($method, $this->methodList)) {
-            $url = $this->baseUrl . $method . '/';
-            $params = $params + ['access_token' => $this->token];
-            try {
-                return $this->getHttpClient()->request('POST', $url, ['form_params' => $params]);
-            } catch (RequestException $e) {
-            }
-        } else {
-            throw new Exception('Not method');
+        $url = ($this->test === false) ? $this->base_url . $method . '/' : $this->test_url . $method . '/';
+        $params = array_merge($params, ['access_token' => $this->access_token]);
+        try {
+            $response = $this->getHttpClient()->request('POST', $url, ['form_params' => $params]);
+            $result = ($response->getStatusCode() == 200) ? $response->getBody()->getContents() : '{"error":{"code":1,"message":"Сервер недоступен"}}"';
+            $result_decode = json_decode($result);
+            return (isset($result_decode->error)) ? new Error($result) : new $this->map[$method]($result);
+        } catch (Exception $e) {
+            return new Error($e);
         }
     }
 
-    public function authorization(string $phone): Authorization
-    {
-        $params = ['phone' => $phone];
-        return new Authorization($this->query('authorization', $params));
-
-    }
-
-    public function services(string $city): Services
-    {
-        $params = ['city' => $city];
-        return new Services($this->query('services', $params));
-    }
-
-    public function marketing(string $city): Marketing
-    {
-        $params = ['city' => $city];
-        return new Marketing($this->query('marketing', $params));
-    }
-
-    public function working(string $city): Working
-    {
-        $params = ['city' => $city];
-        return new Working($this->query('working', $params));
-    }
-
-    public function orderStatus(int $order): OrderStatus
-    {
-        $params = ['id' => $order];
-        return new OrderStatus($this->query('order/status', $params));
-    }
-
-    public function seasonalStorageStatus(string $numAuto): SeasonalStorageStatus
-    {
-        $params = ['number' => $numAuto];
-        return new seasonalStorageStatus($this->query('seasonal_storage/status', $params));
-    }
 
 }
