@@ -157,4 +157,15 @@ class Client
         return $this->request('marketing', ['city' => $city]);
     }
 
+    public function orderStatus(int $id): OrderStatus
+    {
+        return $this->request('order/status', ['id' => $id]);
+    }
+
+    public function seasonalStorageStatus(string $auto): SeasonalStorageStatus
+    {
+        return $this->request('seasonal_storage/status', ['number' => $auto]);
+    }
+
+
 }
